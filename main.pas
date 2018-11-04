@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  ComCtrls;
+  ComCtrls, uPointStore;
 
 type
 
@@ -15,15 +15,23 @@ type
   TForm1 = class(TForm)
     btnStart: TButton;
     btnClose: TButton;
-    pnlGrow: TPanel;
-    Panel2: TPanel;
+    btnLoad: TButton;
+    OpenDialog1: TOpenDialog;
+    pnlGrow : TPanel;
+    Panel2  : TPanel;
     StatusBar1: TStatusBar;
     procedure btnCloseClick(Sender: TObject);
+    procedure btnLoadClick(Sender: TObject);
     procedure btnStartClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
     procedure grow;
     procedure move(VAR x: Integer; VAR y:integer);
+    procedure clearTail;
+    procedure loadGrowth;
+    function minsPerHit(StartTime: int64; hits: integer):double;
   public
 
   end;
@@ -32,8 +40,12 @@ CONST
   MAX_HEIGHT = 600;
   MAX_WIDTH  = 800;
 var
-  Form1: TForm1;
-  abort: boolean;
+  Form1     : TForm1;
+  abort     : boolean;
+  ps        : pointStore;          //  Stores the points of the random walk.
+  hs        : pointStore;          //  Stores the points of the growth.
+  tailLength: integer;
+  fileName  : string;
 
 implementation
 
@@ -46,12 +58,32 @@ procedure TForm1.FormCreate(Sender: TObject);
 begin
   Randomize;  //  This way we generate a new sequence every time the program is run
 
+  fileName       := format('growth_%s.txt', [FormatDateTime('DDMMMMYYYY', now)]);
   pnlGrow.Height := MAX_HEIGHT;
   pnlGrow.Width  := MAX_WIDTH;
+  pnlGrow.Color  := clBlack;
   abort          := false;
+  tailLength     := 50;
+
+  ps := pointStore.Create;
+  hs := pointStore.Create;
+end;
+
+procedure TForm1.FormShow(Sender: TObject);
+begin
+
+end;
+
+procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+begin
+  ps.Free;
+  hs.Free;
 end;
 
 procedure TForm1.btnCloseClick(Sender: TObject);
+{  Can either be used to stop or close the app.
+   If the app is stopped it should be able to be re-started.
+}
 begin
   if btnClose.Caption = 'Stop' then
     begin
@@ -63,7 +95,18 @@ begin
     close;
 end;
 
+procedure TForm1.btnLoadClick(Sender: TObject);
+begin
+  if OpenDialog1.Execute then
+    begin
+      hs.load(OpenDialog1.FileName);
+      loadGrowth;
+      btnLoad.Enabled := false;
+    end
+end;
+
 procedure TForm1.btnStartClick(Sender: TObject);
+{  Start the growth, the close button is now used to stop the app.    }
 begin
   btnClose.Caption := 'Stop';
   btnStart.Enabled := false;
@@ -71,37 +114,98 @@ begin
 end;
 
 procedure TForm1.grow;
+{  Generates a random walk from top to bottom, by repeatly calling move.
+   If the pixel landed on is part of the existing growthm, the previous
+   position in the random walk then becomes part of the growth [a hit].
+
+   When a hit is found, the random walk then start again and the
+   hit is added to the hitStore and the pointStore is cleared.
+}
 VAR
-  x, y  : integer;
-  x1, y1: integer;
+  x, y     : integer;
+  x1, y1   : integer;
+  hits     : integer;
+  StartTime: int64;
+  p, p1    : TPoint;
 begin
-  x := MAX_WIDTH DIV 2;
-  y := 0;
+  StartTime := GetTickCount64;
+  x         := MAX_WIDTH DIV 2;     //  Starting position of the random walk.
+  y         := 0;
+  hits      := hs.Index;
 
   pnlGrow.Canvas.Pen.Color    := clLime;
-  pnlGrow.Canvas.Pen.Width    := 2;
+  pnlGrow.Canvas.Pen.Width    := 1;
   pnlGrow.Canvas.Pen.Style    := psSolid;
   pnlGrow.Canvas.Line(0, MAX_HEIGHT-5, MAX_WIDTH, MAX_HEIGHT-5);
+
   pnlGrow.Canvas.Pixels[x, y] := clGreen;
 
   repeat
-    Application.Processmessages;
+    Application.Processmessages; //  Look ouotside the app, so PC is not sluggish.
 
     x1 := x;
     y1 := y;
 
-    //pnlGrow.Canvas.Pixels[x, y] := clBlack;
-    move(x, y);
+    move(x, y);                   //  Generate the next point in the random walk.
 
-    if pnlGrow.Canvas.Pixels[x, y] = clLime then
+    if pnlGrow.Canvas.Pixels[x, y] = clLime then  //  we have a hit.
       begin
         pnlGrow.Canvas.Pixels[x1, y1] := clLime;
-        x := MAX_WIDTH DIV 2;
+        p.x := x;
+        p.y := y;
+        hs.push(p);               //  Store the new hit point.
+        hs.save(fileName);        //  save hitStore to text file.
+        x := MAX_WIDTH DIV 2;     //  Reset the starting position of the random walk.
         y := 0;
+        inc(hits);
+        StatusBar1.Panels.Items[0].Text := format('hits = %d  mins per hit = %f', [hits, minsPerHit(StartTime, hits)]);
+        clearTail;                //  Clear the tail after a hit.
+        ps.clear;                 //  Clear the pointStore [random walk].
       end
     else
+    begin
       pnlGrow.Canvas.Pixels[x, y] := clGreen;
+      p.x := x;
+      p.y := y;
+      ps.push(p);                 //  Store the next point in the random walk.
+
+      p1 := ps.pop(ps.Index - tailLength);   //  Request the end of the tail
+                                             //  and set to black if valid.
+      if p1.x <> -1 then pnlGrow.Canvas.Pixels[p1.x, p1.y] := clBlack;
+     end;
   until abort;
+end;
+
+procedure TForm1.clearTail;
+{  When we have a hit, that is we have added to the growth the
+   pointStore is cleared, this will leave the last tail on the screen.
+   So just before we clear the pointsStore, this routine clears the
+   remaing points of the random walk.}
+var
+  f: integer;
+  p: TPoint;
+begin
+  for f := ps.Index-1 downto ps.Index-tailLength do
+  begin
+    p := ps.pop(f);
+    if p.x <> -1 then pnlGrow.Canvas.Pixels[p.x, p.y] := clBlack;
+  end;
+end;
+
+function TForm1.minsPerHit(StartTime: int64; hits: integer):double;
+{  Calculates of long it takes for each hit - in minutes per hit.
+   NB this an average.
+}
+VAR
+  noOfTicks: int64;
+  noOfsecs : integer;
+  noOfMins : integer;
+begin
+  noOfTicks := GetTickCount64 - StartTime;
+  noOfsecs  := NoOfTicks DIV 1000;
+  noOfMins  := noOfSecs DIV 60;
+
+  result := noOfMins / hits;
 end;
 
 procedure TForm1.move(VAR x: Integer; VAR y:integer);
@@ -157,8 +261,21 @@ begin
   if y < 0 then y := 0;
   if x > MAX_WIDTH  then x := MAX_WIDTH;
   if y > MAX_HEIGHT then y := MAX_HEIGHT;
+end;
 
-  StatusBar1.Panels.Items[0].Text := format('direction = %d  x = %d  y = %d', [direction, x, y]);
+procedure TForm1.loadGrowth;
+VAR
+  f: integer;
+  p: TPoint;
+begin
+  if hs.Index = 0 then exit;
+
+  for f := 0 to hs.Index - 1 do
+  begin
+    p := hs.pop(f);
+    pnlGrow.Canvas.Pixels[p.x, p.y] := clLime;
+  end;
+  StatusBar1.Panels.Items[0].Text := format('hits = %d', [hs.Index]);
 end;
 
 end.
