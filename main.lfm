@@ -8,7 +8,6 @@ object Form1: TForm1
   ClientWidth = 849
   OnClose = FormClose
   OnCreate = FormCreate
-  OnShow = FormShow
   LCLVersion = '2.0.0.2'
   object pnlGrow: TPanel
     Left = 24

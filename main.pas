@@ -6,32 +6,32 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  ComCtrls, uPointStore;
+  ComCtrls, uPointStore, Windows;
 
 type
 
   { TForm1 }
 
   TForm1 = class(TForm)
-    btnStart: TButton;
-    btnClose: TButton;
-    btnLoad: TButton;
+    btnStart   : TButton;
+    btnClose   : TButton;
+    btnLoad    : TButton;
     OpenDialog1: TOpenDialog;
-    pnlGrow : TPanel;
-    Panel2  : TPanel;
-    StatusBar1: TStatusBar;
+    pnlGrow    : TPanel;
+    Panel2     : TPanel;
+    StatusBar1 : TStatusBar;
+
     procedure btnCloseClick(Sender: TObject);
     procedure btnLoadClick(Sender: TObject);
     procedure btnStartClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
-    procedure FormShow(Sender: TObject);
   private
     procedure grow;
     procedure move(VAR x: Integer; VAR y:integer);
     procedure clearTail;
     procedure loadGrowth;
-    function minsPerHit(StartTime: int64; hits: integer):double;
+    function minsPerHit(hits: integer; elapsedTime: int64):double;
   public
 
   end;
@@ -40,13 +40,13 @@ CONST
   MAX_HEIGHT = 600;
   MAX_WIDTH  = 800;
 var
-  Form1     : TForm1;
-  abort     : boolean;
-  ps        : pointStore;          //  Stores the points of the random walk.
-  hs        : pointStore;          //  Stores the points of the growth.
-  tailLength: integer;
-  fileName  : string;
-
+  Form1      : TForm1;
+  abort      : boolean;
+  ps         : pointStore;          //  Stores the points of the random walk.
+  hs         : pointStore;          //  Stores the points of the growth.
+  tailLength : integer;
+  fileName   : string;
+  runningTime: int64;
 implementation
 
 {$R *.lfm}
@@ -67,14 +67,12 @@ begin
 
   ps := pointStore.Create;
   hs := pointStore.Create;
-end;
 
-procedure TForm1.FormShow(Sender: TObject);
-begin
-
+  runningTime := 0;
 end;
 
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+{  Free stuff when closing.    }
 begin
   ps.Free;
   hs.Free;
@@ -96,12 +94,19 @@ begin
 end;
 
 procedure TForm1.btnLoadClick(Sender: TObject);
+{  If exewcuted a new growth is created form a saved text file.
+
+   NO ERROR CHECKING YET.
+}
 begin
   if OpenDialog1.Execute then
     begin
       hs.load(OpenDialog1.FileName);
       loadGrowth;
       btnLoad.Enabled := false;
+      runningTime := hs.Elapsed;
+      StatusBar1.Panels.Items[0].Text := format('hits = %d  mins per hit = %f',
+                                [hs.Index, minsPerHit(hs.Index, runningTime)]);
     end
 end;
 
@@ -110,6 +115,7 @@ procedure TForm1.btnStartClick(Sender: TObject);
 begin
   btnClose.Caption := 'Stop';
   btnStart.Enabled := false;
+  btnLoad.Enabled  := false;
   grow;
 end;
 
@@ -122,13 +128,13 @@ procedure TForm1.grow;
    hit is added to the hitStore and the pointStore is cleared.
 }
 VAR
-  x, y     : integer;
-  x1, y1   : integer;
-  hits     : integer;
-  StartTime: int64;
-  p, p1    : TPoint;
+  x, y    : integer;
+  x1, y1  : integer;
+  hits    : integer;
+  growTime: int64;
+  p, p1   : TPoint;
+  elapsedTime: integer;
 begin
-  StartTime := GetTickCount64;
   x         := MAX_WIDTH DIV 2;     //  Starting position of the random walk.
   y         := 0;
   hits      := hs.Index;
@@ -139,9 +145,9 @@ begin
   pnlGrow.Canvas.Line(0, MAX_HEIGHT-5, MAX_WIDTH, MAX_HEIGHT-5);
 
   pnlGrow.Canvas.Pixels[x, y] := clGreen;
-
+  growTime := GetTickCount64;
   repeat
-    Application.Processmessages; //  Look ouotside the app, so PC is not sluggish.
+    Application.Processmessages; //  Look outside the app, so PC is not sluggish.
 
     x1 := x;
     y1 := y;
@@ -153,21 +159,25 @@ begin
         pnlGrow.Canvas.Pixels[x1, y1] := clLime;
         p.x := x;
         p.y := y;
-        hs.push(p);               //  Store the new hit point.
-        hs.save(fileName);        //  save hitStore to text file.
-        x := MAX_WIDTH DIV 2;     //  Reset the starting position of the random walk.
+        elapsedTime := (GetTickCount64 - growTime);
+        hs.push(p, elapsedTime);    //  Store the new hit point.
+        hs.save(fileName);                        //  save hitStore to text file.
+        x := MAX_WIDTH DIV 2;                     //  Reset the starting position of the random walk.
         y := 0;
         inc(hits);
-        StatusBar1.Panels.Items[0].Text := format('hits = %d  mins per hit = %f', [hits, minsPerHit(StartTime, hits)]);
+        StatusBar1.Panels.Items[0].Text := format('hits = %d  mins per hit = %f',
+                                          [hits, minsPerHit(hits, elapsedTime)]);
         clearTail;                //  Clear the tail after a hit.
         ps.clear;                 //  Clear the pointStore [random walk].
+        growTime := GetTickCount64;
       end
     else
     begin
       pnlGrow.Canvas.Pixels[x, y] := clGreen;
       p.x := x;
       p.y := y;
-      ps.push(p);                 //  Store the next point in the random walk.
+      ps.push(p, 0);                 //  Store the next point in the random walk.
+                                     //  No need to store time for the random walk.
 
       p1 := ps.pop(ps.Index - tailLength);   //  Request the end of the tail
                                              //  and set to black if valid.
@@ -185,25 +195,24 @@ var
   f: integer;
   p: TPoint;
 begin
-  for f := ps.Index-1 downto ps.Index-tailLength do
+  for f := ps.Index-2 downto ps.Index-tailLength do
   begin
     p := ps.pop(f);
     if p.x <> -1 then pnlGrow.Canvas.Pixels[p.x, p.y] := clBlack;
   end;
 end;
 
-function TForm1.minsPerHit(StartTime: int64; hits: integer):double;
+function TForm1.minsPerHit(hits: integer; elapsedTime: int64):double;
 {  Calculates of long it takes for each hit - in minutes per hit.
    NB this an average.
 }
 VAR
-  noOfTicks: int64;
   noOfsecs : integer;
   noOfMins : integer;
 begin
-  noOfTicks := GetTickCount64 - StartTime;
-  noOfsecs  := NoOfTicks DIV 1000;
-  noOfMins  := noOfSecs DIV 60;
+  runningTime += elapsedTime;
+  noOfsecs    := runningTime DIV 1000;
+  noOfMins    := noOfSecs DIV 60;
 
   result := noOfMins / hits;
 end;
@@ -264,6 +273,9 @@ begin
 end;
 
 procedure TForm1.loadGrowth;
+{  Draws a growth from an existing pointStore.
+   This could be called when the program is first loaded.
+}
 VAR
   f: integer;
   p: TPoint;
@@ -275,7 +287,6 @@ begin
     p := hs.pop(f);
     pnlGrow.Canvas.Pixels[p.x, p.y] := clLime;
   end;
-  StatusBar1.Panels.Items[0].Text := format('hits = %d', [hs.Index]);
 end;
 
 end.
