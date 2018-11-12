@@ -6,26 +6,35 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  ComCtrls, uPointStore, Windows;
+  ComCtrls, Menus, uPointStore, Windows, uOptions, formAbout, formhelp,
+  formLicence;
 
 type
 
-  { TForm1 }
+  { TfrmGrowth }
 
-  TForm1 = class(TForm)
-    btnStart   : TButton;
-    btnClose   : TButton;
-    btnLoad    : TButton;
-    OpenDialog1: TOpenDialog;
-    pnlGrow    : TPanel;
-    Panel2     : TPanel;
-    StatusBar1 : TStatusBar;
+  TfrmGrowth = class(TForm)
+    btnStart     : TButton;
+    btnClose     : TButton;
+    btnLoad      : TButton;
+    mnuFile      : TMenuItem;
+    mnuhelp      : TMenuItem;
+    mnuItmExit   : TMenuItem;
+    mnuItmHelp   : TMenuItem;
+    mnuItmLicense: TMenuItem;
+    mnuItmAbout  : TMenuItem;
+    mnuMain      : TMainMenu;
+    OpenDialog1  : TOpenDialog;
+    pnlGrow      : TPanel;
+    Panel2       : TPanel;
+    StatusBar1   : TStatusBar;
 
     procedure btnCloseClick(Sender: TObject);
     procedure btnLoadClick(Sender: TObject);
     procedure btnStartClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
+    procedure mnuItmClick(Sender: TObject);
   private
     procedure grow;
     procedure move(VAR x: Integer; VAR y:integer);
@@ -40,24 +49,33 @@ CONST
   MAX_HEIGHT = 600;
   MAX_WIDTH  = 800;
 var
-  Form1      : TForm1;
-  abort      : boolean;
-  ps         : pointStore;          //  Stores the points of the random walk.
-  hs         : pointStore;          //  Stores the points of the growth.
-  tailLength : integer;
-  fileName   : string;
-  runningTime: int64;
+  frmGrowth   : TfrmGrowth;
+  userOptions : Options;
+  abort       : boolean;
+  ps          : pointStore;          //  Stores the points of the random walk.
+  hs          : pointStore;          //  Stores the points of the growth.
+  tailLength  : integer;
+  fileName    : string;
+  runningTime : int64;
+  appStartTime: int64;          //  used by formAbout to determine how long the app has been running.
 implementation
 
 {$R *.lfm}
 
-{ TForm1 }
+{ TfrmGrowth }
 
 
-procedure TForm1.FormCreate(Sender: TObject);
+procedure TfrmGrowth.FormCreate(Sender: TObject);
 begin
   Randomize;  //  This way we generate a new sequence every time the program is run
 
+  // create options file as c:\Users\<user>\AppData\Local\lazGrowth\Options.xml
+  userOptions := Options.Create;
+
+  frmGrowth.Top  := UserOptions.formTop;
+  frmGrowth.Left := UserOptions.formLeft;
+
+  appStartTime   := GetTickCount64;  //  tick count when application starts.
   fileName       := format('growth_%s.txt', [FormatDateTime('DDMMMMYYYY', now)]);
   pnlGrow.Height := MAX_HEIGHT;
   pnlGrow.Width  := MAX_WIDTH;
@@ -71,14 +89,19 @@ begin
   runningTime := 0;
 end;
 
-procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+procedure TfrmGrowth.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 {  Free stuff when closing.    }
 begin
+  UserOptions.formTop  := frmGrowth.Top;
+  UserOptions.formLeft := frmGrowth.Left;
+
+  userOptions.writeCurrentOptions;  // write out options file
+
   ps.Free;
   hs.Free;
 end;
 
-procedure TForm1.btnCloseClick(Sender: TObject);
+procedure TfrmGrowth.btnCloseClick(Sender: TObject);
 {  Can either be used to stop or close the app.
    If the app is stopped it should be able to be re-started.
 }
@@ -93,7 +116,7 @@ begin
     close;
 end;
 
-procedure TForm1.btnLoadClick(Sender: TObject);
+procedure TfrmGrowth.btnLoadClick(Sender: TObject);
 {  If exewcuted a new growth is created form a saved text file.
 
    NO ERROR CHECKING YET.
@@ -110,7 +133,7 @@ begin
     end
 end;
 
-procedure TForm1.btnStartClick(Sender: TObject);
+procedure TfrmGrowth.btnStartClick(Sender: TObject);
 {  Start the growth, the close button is now used to stop the app.    }
 begin
   btnClose.Caption := 'Stop';
@@ -119,7 +142,7 @@ begin
   grow;
 end;
 
-procedure TForm1.grow;
+procedure TfrmGrowth.grow;
 {  Generates a random walk from top to bottom, by repeatly calling move.
    If the pixel landed on is part of the existing growthm, the previous
    position in the random walk then becomes part of the growth [a hit].
@@ -186,7 +209,7 @@ begin
   until abort;
 end;
 
-procedure TForm1.clearTail;
+procedure TfrmGrowth.clearTail;
 {  When we have a hit, that is we have added to the growth the
    pointStore is cleared, this will leave the last tail on the screen.
    So just before we clear the pointsStore, this routine clears the
@@ -202,7 +225,7 @@ begin
   end;
 end;
 
-function TForm1.minsPerHit(hits: integer; elapsedTime: int64):double;
+function TfrmGrowth.minsPerHit(hits: integer; elapsedTime: int64):double;
 {  Calculates of long it takes for each hit - in minutes per hit.
    NB this an average.
 }
@@ -217,7 +240,7 @@ begin
   result := noOfMins / hits;
 end;
 
-procedure TForm1.move(VAR x: Integer; VAR y:integer);
+procedure TfrmGrowth.move(VAR x: Integer; VAR y:integer);
 {  Moves the point in a random walk.
 
    x=0, y=0 is top left hand corner.
@@ -272,7 +295,7 @@ begin
   if y > MAX_HEIGHT then y := MAX_HEIGHT;
 end;
 
-procedure TForm1.loadGrowth;
+procedure TfrmGrowth.loadGrowth;
 {  Draws a growth from an existing pointStore.
    This could be called when the program is first loaded.
 }
@@ -286,6 +309,50 @@ begin
   begin
     p := hs.pop(f);
     pnlGrow.Canvas.Pixels[p.x, p.y] := clLime;
+  end;
+end;
+
+//
+// ********************************************************* Menu Items *********
+//
+procedure TfrmGrowth.mnuItmClick(Sender: TObject);
+{  A generic click routine called by each menu item.
+
+   The action of the menu is determined from the item name.
+}
+VAR
+  itemName   : string;
+begin
+  itemName := '';
+
+  //  set the appropiate name.
+  if (Sender is TMenuItem) then
+    itemName := TMenuItem(Sender).Name;
+
+  if itemName = '' then exit;    //  not called by a TMenuItem
+
+  case itemName of
+  // ********************************************************* File Menu *********
+  'mnuItmExit': close;
+  // ********************************************************* Help Menu *********
+  'mnuItmHelp':
+  begin
+    frmhelp := TfrmHelp.Create(Nil);
+    frmhelp.ShowModal;
+    FreeAndNil(frmHelp);
+  end;
+  'mnuItmAbout':                                                      //  Calls the About screen.
+  begin
+    frmAbout := TfrmAbout.Create(Nil);  //frmAbout is created
+    frmAbout.ShowModal;                 //frmAbout is displayed
+    FreeAndNil(frmAbout);               //frmAbout is released
+  end;
+  'mnuItmLicense':                                                      //  Calls the License screen.
+  begin
+    frmLicence := TfrmLicence.Create(Nil);
+    frmLicence.ShowModal;
+    FreeAndNil(frmLicence);
+  end;
   end;
 end;
 

@@ -1,11 +1,12 @@
-object Form1: TForm1
+object frmGrowth: TfrmGrowth
   Left = 1006
-  Height = 711
+  Height = 742
   Top = 186
   Width = 849
-  Caption = 'Form1'
-  ClientHeight = 711
+  Caption = 'lazGrowth'
+  ClientHeight = 722
   ClientWidth = 849
+  Menu = mnuMain
   OnClose = FormClose
   OnCreate = FormCreate
   LCLVersion = '2.0.0.2'
@@ -58,7 +59,7 @@ object Form1: TForm1
   object StatusBar1: TStatusBar
     Left = 0
     Height = 23
-    Top = 688
+    Top = 699
     Width = 849
     Panels = <    
       item
@@ -69,5 +70,31 @@ object Form1: TForm1
   object OpenDialog1: TOpenDialog
     left = 768
     top = 640
+  end
+  object mnuMain: TMainMenu
+    left = 559
+    top = 658
+    object mnuFile: TMenuItem
+      Caption = 'File'
+      object mnuItmExit: TMenuItem
+        Caption = 'Exit'
+        OnClick = mnuItmClick
+      end
+    end
+    object mnuhelp: TMenuItem
+      Caption = 'Help'
+      object mnuItmHelp: TMenuItem
+        Caption = 'Help'
+        OnClick = mnuItmClick
+      end
+      object mnuItmLicense: TMenuItem
+        Caption = 'License'
+        OnClick = mnuItmClick
+      end
+      object mnuItmAbout: TMenuItem
+        Caption = 'About'
+        OnClick = mnuItmClick
+      end
+    end
   end
 end

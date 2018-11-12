@@ -17,7 +17,9 @@
     </General>
     <VersionInfo>
       <UseVersionInfo Value="True"/>
-      <BuildNr Value="2"/>
+      <BuildNr Value="5"/>
+      <Language Value="0809"/>
+      <StringTable Comments="contact :: lazGrowth&lt;at>keleven.co.uk" CompanyName="www.keleven.co.uk" FileDescription="Trying to simulate organic growth" InternalName="lazGrowth" LegalCopyright="(c) Kevin Scott 2018" OriginalFilename="lazGrowth" ProductName="lazGrowth" ProductVersion="Build 5"/>
     </VersionInfo>
     <BuildModes Count="1">
       <Item1 Name="Default" Default="True"/>
@@ -35,7 +37,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="3">
+    <Units Count="6">
       <Unit0>
         <Filename Value="lazGrowth.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -43,7 +45,7 @@
       <Unit1>
         <Filename Value="main.pas"/>
         <IsPartOfProject Value="True"/>
-        <ComponentName Value="Form1"/>
+        <ComponentName Value="frmGrowth"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="Main"/>
@@ -53,6 +55,29 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uPointStore"/>
       </Unit2>
+      <Unit3>
+        <Filename Value="formabout.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="frmAbout"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="formAbout"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="formhelp.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="frmHelp"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="formlicence.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="frmLicence"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="formLicence"/>
+      </Unit5>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

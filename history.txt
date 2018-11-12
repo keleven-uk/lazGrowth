@@ -1,0 +1,71 @@
+Build 5
+
+Added basic menu system - File and Help.
+  File contains the single option to close the application.
+  Help contains three options - Help, Licence and About.
+  Added three forms - frmHelp, frmLicence and frmAbout.
+
+Added uOptions.pas, to store future user options.
+
+Currently
+1537 lines of source code.
+746 statements
+20.9% comment
+
+
+Build 4
+
+commit 23331cfd6f37ace2035efa2c50feb60cd457d304
+Author: keleven-uk <github@keleven.co.uk>
+Date:   Wed Nov 7 22:09:10 2018 +0000
+
+    Added the ability to store the elapsed time taken to generate the point
+    along side the point in the pointSore.
+    
+    Amended main program to time the generation of each point and pass to
+    the point store.
+    
+    Amended the main program, so a previous growth can be loaded and
+    continued.
+
+
+Build 3
+commit 4a5fe065fbebc251f845d8e3d41807de19b7f89a
+Author: keleven-uk <github@keleven.co.uk>
+Date:   Sun Nov 4 20:43:16 2018 +0000
+
+    Added pointStore - this is a class that will store a series of points
+    [x, y].  It allows point to be pushed onto the store and pop's off, from
+    a given position within the store.  The class can also load and save the
+    store to text file.
+    
+    Th epointStore is used twice, one to remember the random walk and one to
+    remember the hits [parts of the growth].
+    
+    Added routines to main program to load the growth from file, clear the
+    tail upon a new hit and to display hits per min.
+
+
+Build 2
+
+commit 1dae14c1a2c23bece7cae8eb79d4e6b16fc202bc
+Author: keleven-uk <github@keleven.co.uk>
+Date:   Fri Oct 26 20:07:29 2018 +0100
+
+    Added README.md and included into github
+    https://github.com/keleven-uk/lazGrowth.git
+
+
+Build 1
+
+commit 2213c1582ad2874e185b7c3761e8fd1bc35aeb61
+Author: Kevin Scott <github@keleven.co.uk>
+Date:   Fri Oct 26 19:58:50 2018 +0100
+
+    Initial commit.
+    
+    Basic GUI completed.
+    
+    Basic logic complete.
+    Random walk works okay, basic collation also seems to work.
+
