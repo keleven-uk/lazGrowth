@@ -4,41 +4,54 @@ unit Main;
 
 interface
 
+{
+Windows unit also has TBitmap, but it represents Windows bitmap handle
+instead of LCL TBitmap class. Simply reorder your uses clause, ensure
+Windows comes before Graphics.
+}
 uses
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  ComCtrls, Menus, uPointStore, Windows, uOptions, formAbout, formhelp,
-  formLicence;
+  Classes, SysUtils, Forms, Controls, Dialogs, StdCtrls, ExtCtrls,
+  ComCtrls, Menus, Spin, uPointStore, Windows, uOptions, formAbout, formhelp,
+  formLicence, Graphics;
 
 type
 
   { TfrmGrowth }
 
   TfrmGrowth = class(TForm)
-    btnStart     : TButton;
-    btnClose     : TButton;
-    btnLoad      : TButton;
-    mnuFile      : TMenuItem;
-    mnuhelp      : TMenuItem;
-    mnuItmExit   : TMenuItem;
-    mnuItmHelp   : TMenuItem;
-    mnuItmLicense: TMenuItem;
-    mnuItmAbout  : TMenuItem;
-    mnuMain      : TMainMenu;
-    OpenDialog1  : TOpenDialog;
-    pnlGrow      : TPanel;
-    Panel2       : TPanel;
-    StatusBar1   : TStatusBar;
+    btnStart        : TButton;
+    btnClose        : TButton;
+    btnLoad         : TButton;
+    btnSave         : TButton;
+    chckBxShowTail  : TCheckBox;
+    lblTailLength   : TLabel;
+    mnuFile         : TMenuItem;
+    mnuhelp         : TMenuItem;
+    mnuItmExit      : TMenuItem;
+    mnuItmHelp      : TMenuItem;
+    mnuItmLicense   : TMenuItem;
+    mnuItmAbout     : TMenuItem;
+    mnuMain         : TMainMenu;
+    OpenDialog1     : TOpenDialog;
+    pnlGrow         : TPanel;
+    Panel2          : TPanel;
+    spnEdtTailLength: TSpinEdit;
+    StatusBar1      : TStatusBar;
 
     procedure btnCloseClick(Sender: TObject);
     procedure btnLoadClick(Sender: TObject);
+    procedure btnSaveClick(Sender: TObject);
     procedure btnStartClick(Sender: TObject);
+    procedure chckBxShowTailChange(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure mnuItmClick(Sender: TObject);
+    procedure spnEdtTailLengthChange(Sender: TObject);
   private
     procedure grow;
     procedure move(VAR x: Integer; VAR y:integer);
     procedure clearTail;
+    procedure showTail(x: integer; y:integer);
     procedure loadGrowth;
     function minsPerHit(hits: integer; elapsedTime: int64):double;
   public
@@ -54,7 +67,6 @@ var
   abort       : boolean;
   ps          : pointStore;          //  Stores the points of the random walk.
   hs          : pointStore;          //  Stores the points of the growth.
-  tailLength  : integer;
   fileName    : string;
   runningTime : int64;
   appStartTime: int64;          //  used by formAbout to determine how long the app has been running.
@@ -67,6 +79,9 @@ implementation
 
 procedure TfrmGrowth.FormCreate(Sender: TObject);
 begin
+  ps := pointStore.Create;
+  hs := pointStore.Create;
+
   Randomize;  //  This way we generate a new sequence every time the program is run
 
   // create options file as c:\Users\<user>\AppData\Local\lazGrowth\Options.xml
@@ -75,18 +90,18 @@ begin
   frmGrowth.Top  := UserOptions.formTop;
   frmGrowth.Left := UserOptions.formLeft;
 
+  chckBxShowTail.checked   := userOptions.showTail;
+  lblTailLength.Enabled    := userOptions.showTail;
+  spnEdtTailLength.Enabled := userOptions.showTail;
+  btnSave.Enabled          := false;
+
   appStartTime   := GetTickCount64;  //  tick count when application starts.
-  fileName       := format('growth_%s.txt', [FormatDateTime('DDMMMMYYYY', now)]);
+  runningTime    := 0;
+  fileName       := format('%s_%s.txt', [userOptions.productName, FormatDateTime('DDMMMMYYYY', now)]);
   pnlGrow.Height := MAX_HEIGHT;
   pnlGrow.Width  := MAX_WIDTH;
   pnlGrow.Color  := clBlack;
   abort          := false;
-  tailLength     := 50;
-
-  ps := pointStore.Create;
-  hs := pointStore.Create;
-
-  runningTime := 0;
 end;
 
 procedure TfrmGrowth.FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -100,7 +115,9 @@ begin
   ps.Free;
   hs.Free;
 end;
-
+//
+//  control stuff
+//
 procedure TfrmGrowth.btnCloseClick(Sender: TObject);
 {  Can either be used to stop or close the app.
    If the app is stopped it should be able to be re-started.
@@ -117,7 +134,7 @@ begin
 end;
 
 procedure TfrmGrowth.btnLoadClick(Sender: TObject);
-{  If exewcuted a new growth is created form a saved text file.
+{  If executed, a new growth is created form a saved text file.
 
    NO ERROR CHECKING YET.
 }
@@ -127,10 +144,37 @@ begin
       hs.load(OpenDialog1.FileName);
       loadGrowth;
       btnLoad.Enabled := false;
-      runningTime := hs.Elapsed;
+      runningTime     := hs.Elapsed;
       StatusBar1.Panels.Items[0].Text := format('hits = %d  mins per hit = %f',
                                 [hs.Index, minsPerHit(hs.Index, runningTime)]);
-    end
+    end;
+
+  btnSave.Enabled := true;
+end;
+
+procedure TfrmGrowth.btnSaveClick(Sender: TObject);
+{  Saves the current growth to a BMP file.    }
+VAR
+  bitmap    : TBitmap;
+  rectangle : TRect;
+  bitMapName: string;
+begin
+  btnSave.Enabled := false;
+
+  bitmap := TBitmap.Create;
+  bitmap.SetSize(pnlGrow.Canvas.Width, pnlGrow.Canvas.Height);   //  Important.
+  bitmap.Canvas.Brush.Color := clBlack;                          //  maybe not needed.
+
+  rectangle := TRect.Create(0, 0, pnlGrow.Canvas.Width, pnlGrow.Canvas.Height);
+
+  bitmap.Canvas.CopyRect(rectangle, pnlGrow.Canvas, rectangle);
+
+  bitMapName := format('%s_%s.bmp', [userOptions.productName, FormatDateTime('ddmmyyy_hhnnss', now)]);
+  bitmap.SaveToFile(bitMapName);
+
+  bitmap.Free;
+
+  btnSave.Enabled := true;
 end;
 
 procedure TfrmGrowth.btnStartClick(Sender: TObject);
@@ -139,12 +183,34 @@ begin
   btnClose.Caption := 'Stop';
   btnStart.Enabled := false;
   btnLoad.Enabled  := false;
+  btnSave.Enabled  := true;
   grow;
 end;
 
+procedure TfrmGrowth.chckBxShowTailChange(Sender: TObject);
+{  Amended use options to show tail or not.}
+begin
+  userOptions.showTail     := chckBxShowTail.checked;
+  lblTailLength.Enabled    := chckBxShowTail.checked;
+  spnEdtTailLength.Enabled := chckBxShowTail.checked;
+
+  userOptions.writeCurrentOptions;
+  clearTail;                      //  Clear the tail.
+end;
+
+procedure TfrmGrowth.spnEdtTailLengthChange(Sender: TObject);
+begin
+  userOptions.tailLength := spnEdtTailLength.Value;
+  userOptions.writeCurrentOptions;
+  clearTail;                      //  Clear the tail.
+end;
+
+//
+//  Drawing stuff
+//
 procedure TfrmGrowth.grow;
-{  Generates a random walk from top to bottom, by repeatly calling move.
-   If the pixel landed on is part of the existing growthm, the previous
+{  Generates a random walk from top to bottom, by repeatedly calling move.
+   If the pixel landed on is part of the existing growth, the previous
    position in the random walk then becomes part of the growth [a hit].
 
    When a hit is found, the random walk then start again and the
@@ -155,7 +221,7 @@ VAR
   x1, y1  : integer;
   hits    : integer;
   growTime: int64;
-  p, p1   : TPoint;
+  p       : TPoint;
   elapsedTime: integer;
 begin
   x         := MAX_WIDTH DIV 2;     //  Starting position of the random walk.
@@ -168,7 +234,8 @@ begin
   pnlGrow.Canvas.Line(0, MAX_HEIGHT-5, MAX_WIDTH, MAX_HEIGHT-5);
 
   pnlGrow.Canvas.Pixels[x, y] := clGreen;
-  growTime := GetTickCount64;
+
+  growTime    := GetTickCount64;
   repeat
     Application.Processmessages; //  Look outside the app, so PC is not sluggish.
 
@@ -179,46 +246,56 @@ begin
 
     if pnlGrow.Canvas.Pixels[x, y] = clLime then  //  we have a hit.
       begin
-        pnlGrow.Canvas.Pixels[x1, y1] := clLime;
-        p.x := x;
-        p.y := y;
         elapsedTime := (GetTickCount64 - growTime);
-        hs.push(p, elapsedTime);    //  Store the new hit point.
+        pnlGrow.Canvas.Pixels[x1, y1] := clLime;
+        p.x := x1;
+        p.y := y1;
+        hs.push(p, elapsedTime);                  //  Store the new hit point.
         hs.save(fileName);                        //  save hitStore to text file.
         x := MAX_WIDTH DIV 2;                     //  Reset the starting position of the random walk.
         y := 0;
         inc(hits);
         StatusBar1.Panels.Items[0].Text := format('hits = %d  mins per hit = %f',
                                           [hits, minsPerHit(hits, elapsedTime)]);
-        clearTail;                //  Clear the tail after a hit.
-        ps.clear;                 //  Clear the pointStore [random walk].
+        if userOptions.showTail then clearTail;         //  Clear the tail after a hit.
+        ps.clear;                                       //  Clear the pointStore [random walk].
         growTime := GetTickCount64;
       end
-    else
+    else            //  we have a miss.
     begin
-      pnlGrow.Canvas.Pixels[x, y] := clGreen;
       p.x := x;
       p.y := y;
       ps.push(p, 0);                 //  Store the next point in the random walk.
                                      //  No need to store time for the random walk.
 
-      p1 := ps.pop(ps.Index - tailLength);   //  Request the end of the tail
-                                             //  and set to black if valid.
-      if p1.x <> -1 then pnlGrow.Canvas.Pixels[p1.x, p1.y] := clBlack;
-     end;
+      if userOptions.showTail then showTail(x, y);
+     end;   //  pnlGrow.Canvas.Pixels[x, y] = clLime then
   until abort;
+end;
+
+procedure TfrmGrowth.showTail(x: integer; y:integer);
+{  Draws the tail, if needed.    }
+VAR
+  p: TPoint;
+begin
+  pnlGrow.Canvas.Pixels[x, y] := clGreen;
+
+  p := ps.pop(ps.Index - userOptions.tailLength);   //  Request the end of the tail
+                                                    //  and set to black if valid.
+  if p.x <> -1 then pnlGrow.Canvas.Pixels[p.x, p.y] := clBlack;         ;
 end;
 
 procedure TfrmGrowth.clearTail;
 {  When we have a hit, that is we have added to the growth the
    pointStore is cleared, this will leave the last tail on the screen.
    So just before we clear the pointsStore, this routine clears the
-   remaing points of the random walk.}
+   remaining points of the random walk.}
 var
   f: integer;
   p: TPoint;
 begin
-  for f := ps.Index-2 downto ps.Index-tailLength do
+  if ps.Index = 0 then exit;
+  for f := (ps.Index-2) downto (ps.Index - userOptions.tailLength) do
   begin
     p := ps.pop(f);
     if p.x <> -1 then pnlGrow.Canvas.Pixels[p.x, p.y] := clBlack;
@@ -325,7 +402,7 @@ VAR
 begin
   itemName := '';
 
-  //  set the appropiate name.
+  //  set the appropriate name.
   if (Sender is TMenuItem) then
     itemName := TMenuItem(Sender).Name;
 

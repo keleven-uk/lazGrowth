@@ -188,7 +188,7 @@ end;
 function getWindowsVersion: string;
 {  Gets the version of the windows OS.
    This is achieved by capturing the output from the DOS command ver.
-   The ver command is run  into a file and then the file is read back.
+   The ver command is run into a file and then the file is read back.
 }
 VAR
   AProcess   : TProcess;

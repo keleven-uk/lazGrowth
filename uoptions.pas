@@ -55,6 +55,9 @@ type
 
       _optionsName: string;           //  full path to the options file.
 
+      _showTail  : boolean;             //  Show the tail during random walk.
+      _tailLength: integer;             //  Length of tail, in pixels.
+
       procedure checkDirectory;
       Function readChild(PassNode: TDOMNode;  name: string): string;
       Function readChildAttribute(PassNode: TDOMNode;  name: string; attribute: string): string;
@@ -82,6 +85,9 @@ type
       property formTop    : integer read _formTop     write _formTop;
       property formLeft   : integer read _formLeft    write _formLeft;
       property optionsName: string  read _optionsName write _optionsName;
+
+      property showTail  : boolean read _showTail   write _showTail;
+      property tailLength: integer read _tailLength write _tailLength;
 
       constructor Create; overload;
       constructor Create(filename: String); overload;
@@ -215,6 +221,9 @@ implementation
   screenSave  := o.screenSave;
   formTop     := o.formTop;
   formLeft    := o.formLeft;
+
+  showTail   := o.showTail;
+  tailLength := o.tailLength;
   end;
 
   procedure Options.readOptions;
@@ -278,6 +287,11 @@ implementation
 
         rtn := readChild(PassNode, 'optionsName');
         if rtn <> 'ERROR' then optionsName := ansistring(rtn);
+
+        rtn := readChild(PassNode, 'showTail');
+        if rtn <> 'ERROR' then showTail := StrToBool(rtn);
+        rtn := readChild(PassNode, 'tailLength');
+        if rtn <> 'ERROR' then tailLength := StrToInt(rtn);
       end;
 
     finally
@@ -312,6 +326,9 @@ implementation
     screenSave := True;
     formTop    := 100;              //  the forms top left.
     formLeft   := 100;
+
+    showTail   := true;
+    tailLength := 50
   end;
 
   procedure Options.writeCurrentOptions;
@@ -354,6 +371,9 @@ implementation
 
         ElementNode.AppendChild(writeBolChild(doc,          'screenSave',   screenSave));
         ElementNode.AppendChild(writeIntChildAttribute(Doc, 'formPosition', formTop, formLeft));
+
+        ElementNode.AppendChild(writeBolChild(doc, 'showTail',   showTail));
+        ElementNode.AppendChild(writeIntChild(doc, 'tailLength', tailLength));
       RootNode.AppendChild(ElementNode);
 
       try

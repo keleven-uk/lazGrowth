@@ -79,10 +79,11 @@ var
   cmpUkDate: string;
   i        : integer;
 begin
-  tmrUpTime.Enabled     := True;
-  lblAppUpTime.Caption  := getUpTime('Application');
-  lblSysUpTime.Caption  := getUpTime('System');
-  lblProgrammer.Caption := userOptions.legalCopyright;
+  tmrUpTime.Enabled             := True;
+  lblAppUpTime.Caption          := getUpTime('Application');
+  lblSysUpTime.Caption          := getUpTime('System');
+  lblProgrammer.Caption         := userOptions.legalCopyright;
+  lblProgramDescription.Caption := userOptions.productName;
 
   //  {$I %DATE%} returns the compile date, but in american [ignores local date format]
   //  So, we string slice it to give good old english date format.
@@ -93,9 +94,9 @@ begin
 
   lstBxInfo.Items.add(userOptions.fileDescription);
   lstBxInfo.Items.add('');
-  lstBxInfo.Items.add(format('lazKlock Build   :: %s', [userOptions.productVersion]));
-  lstBxInfo.Items.add(format('lazKlock Version :: %s', [userOptions.fileVersion]));
-  lstBxInfo.Items.add(format('lazBiorhythms Built   :: %s', [cmpUkDate + ' @ ' + {$I %TIME%}]));
+  lstBxInfo.Items.add(format('%s Build   :: %s', [userOptions.productName, userOptions.productVersion]));
+  lstBxInfo.Items.add(format('%s Version :: %s', [userOptions.productName, userOptions.fileVersion]));
+  lstBxInfo.Items.add(format('%s Built   :: %s', [userOptions.productName, cmpUkDate + ' @ ' + {$I %TIME%}]));
 
   {$ifdef WIN32}
     lstBxInfo.Items.add(format('Built with 32 bit Lazarus Version :: %s', [lcl_version]));

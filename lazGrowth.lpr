@@ -1,6 +1,7 @@
 program lazGrowth;
 
 {$mode objfpc}{$H+}
+{$DEFINE debug}
 
 uses
   {$IFDEF UNIX}{$IFDEF UseCThreads}
@@ -8,6 +9,7 @@ uses
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, Main, uPointStore, formAbout, formhelp, formLicence
+
   { you can add units after this };
 
 {$R *.res}

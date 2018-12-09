@@ -1,3 +1,15 @@
+Build 6
+
+Cleaned up frmAbout.
+
+Added option showTail & tailLength to uOptions.
+
+Added to main - Ability to save growth as a bmp file.
+Added to main - Ability to set the length of the tail.
+Added to main - Ability to show the tail, or not.
+Amended in main - the logic in the grow routine.
+
+
 Build 5
 
 Added basic menu system - File and Help.

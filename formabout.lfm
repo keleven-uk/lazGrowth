@@ -119,7 +119,7 @@ object frmAbout: TfrmAbout
   }
   OnCreate = FormCreate
   Position = poMainFormCenter
-  LCLVersion = '1.8.2.0'
+  LCLVersion = '2.0.0.2'
   object Panel2: TPanel
     Left = 8
     Height = 42
@@ -708,7 +708,7 @@ object frmAbout: TfrmAbout
       }
     end
     object lblProgrammer: TLabel
-      Left = 137
+      Left = 144
       Height = 13
       Top = 96
       Width = 134
@@ -718,23 +718,23 @@ object frmAbout: TfrmAbout
       ParentFont = False
     end
     object lblProgramDescription: TLabel
-      Left = 152
+      Left = 160
       Height = 30
-      Top = 64
-      Width = 40
-      Caption = 'stub'
+      Top = 16
+      Width = 130
+      Caption = 'product name'
       Font.Height = -21
       ParentColor = False
       ParentFont = False
     end
     object lblProgramName: TLabel
-      Left = 168
-      Height = 39
-      Top = 24
-      Width = 114
-      Caption = 'lblProgramName'
+      Left = 137
+      Height = 28
+      Top = 56
+      Width = 156
+      Caption = 'Trying to simulate organic growth'
       Font.CharSet = ANSI_CHARSET
-      Font.Height = -21
+      Font.Height = -15
       Font.Name = 'Gabriola'
       Font.Pitch = fpVariable
       Font.Quality = fqDraft
