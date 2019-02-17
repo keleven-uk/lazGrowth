@@ -9,7 +9,7 @@ object frmGrowth: TfrmGrowth
   Menu = mnuMain
   OnClose = FormClose
   OnCreate = FormCreate
-  LCLVersion = '2.0.0.2'
+  LCLVersion = '2.0.0.4'
   object pnlGrow: TPanel
     Left = 24
     Height = 600

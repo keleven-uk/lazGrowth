@@ -1,3 +1,12 @@
+Build 7
+
+Corrected memory leaks in uOptions.pas - not freeing fvi object.
+
+Corrected spelling.
+
+** Compiled with Lazarus V2.0.0.4 **
+
+
 Build 6
 
 Cleaned up frmAbout.

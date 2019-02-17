@@ -1,6 +1,6 @@
 unit uPointStore;
-{  A Class that remembers a series of TPoint i.e. pixel co-oridantes.
-   Aslo, if used, will store the elapsed time taked to generate the point.
+{  A Class that remembers a series of TPoint i.e. pixel co-ordinates.
+   Also, if used, will store the elapsed time taken to generate the point.
 
    the store acts a LIFO - last in First out.
 
@@ -31,7 +31,7 @@ type
       Points  : Array of TPoint;         //  The points store.
       Ticks   : Array of integer;        //  Time duration to generate the point, in ticks.
       _index  : integer;                 //  Point to the top of the store.
-      _elapsed: int64;                   //  Sum of the elaspsed times - used on load.
+      _elapsed: int64;                   //  Sum of the elapsed times - used on load.
 
     public
       property Index   : integer read _index   write _index;
@@ -94,7 +94,7 @@ end;
 procedure pointStore.push(p: TPoint; t: integer);
 {  Add a TPoint and elapsed time to the store.
    The pointer is moved to the next free position in the store.
-   If the pointer exceeds the size of the store, the store grows dynamacaly.
+   If the pointer exceeds the size of the store, the store grows dynamically.
 }
 begin
   Points[Index] := p;    //  point [x, y]
@@ -125,7 +125,7 @@ begin
 end;
 
 procedure pointStore.load(fileName: string);
-{  Loads the conrents of a text file into the store.
+{  Loads the contents of a text file into the store.
    The first performs a store clear - so any existing data is lost.
 }
 var

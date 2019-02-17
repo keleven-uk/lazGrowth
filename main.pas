@@ -112,8 +112,11 @@ begin
 
   userOptions.writeCurrentOptions;  // write out options file
 
+  userOptions.Free;
   ps.Free;
   hs.Free;
+
+  CloseAction:= caFree;
 end;
 //
 //  control stuff
